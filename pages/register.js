@@ -33,10 +33,19 @@ const Register = () => {
 
   const registerUser = async (values) => {
     try {
-      const res = await backend.post("/auth/register", values, {
+      const res = await backend.post("/register", JSON.stringify(values), {
+        headers: {
+          "Content-Type": "application/json",
+        },
         validateStatus: false,
       });
 
+      if (res.status !== 200) {
+        alert(`Error: ${res.data.message}`);
+        return null;
+      }
+
+      console.log(res.data.message);
       return res.data;
     } catch (error) {
       console.log(error);
