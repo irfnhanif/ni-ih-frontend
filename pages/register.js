@@ -16,7 +16,7 @@ import {
   Icon,
 } from "@chakra-ui/react";
 
-import { BiLockAlt, BiShow, BiHide, BiUser } from "react-icons/bi";
+import { BiIdCard, BiLockAlt, BiShow, BiHide, BiUser } from "react-icons/bi";
 import backend from "../api/backend";
 import { useRouter } from "next/router";
 
@@ -98,6 +98,11 @@ const Register = () => {
               </FormControl>
               <FormControl>
                 <InputGroup>
+                  <InputLeftElement
+                    children={
+                      <Icon as={BiIdCard} w="6" h="6" color="gray.300" />
+                    }
+                  />
                   <Input
                     type="email"
                     placeholder="Email"
@@ -172,7 +177,7 @@ const Register = () => {
                 <Text align="center">
                   Already have account?{" "}
                   <Link color="blue.400" href="./login">
-                    login
+                    Login
                   </Link>
                 </Text>
               </Stack>

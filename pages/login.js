@@ -26,7 +26,7 @@ import { AuthContext } from "../utils/AuthContext";
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState(""); // changed from 'nim' to 'email'
+  const [email, setEmail] = useState(""); 
   const [password, setPassword] = useState("");
   const { setToken } = useContext(AuthContext);
 
@@ -96,7 +96,7 @@ const Login = () => {
                     type="text"
                     placeholder="Email" 
                     value={email}  
-                    onChange={(e) => setEmail(e.target.value)} // changed from 'setNim' to 'setEmail'
+                    onChange={(e) => setEmail(e.target.value)}
                   />
                 </InputGroup>
               </FormControl>
@@ -145,7 +145,7 @@ const Login = () => {
                 <Text align="center">
                   Don't have an account?{" "}
                   <Link color="blue.400" href="./register">
-                    register
+                    Register
                   </Link>
                 </Text>
               </Stack>
