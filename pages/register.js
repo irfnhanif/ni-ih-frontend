@@ -33,7 +33,7 @@ const Register = () => {
 
   const registerUser = async (values) => {
     try {
-      const res = await backend.post("/register", JSON.stringify(values), {
+      const res = await backend.post("/api/register", JSON.stringify(values), {
         headers: {
           "Content-Type": "application/json",
         },

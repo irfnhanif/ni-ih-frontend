@@ -42,7 +42,7 @@ const Login = () => {
     };
 
     try {
-      const res = await backend.post("/login", JSON.stringify(user), {
+      const res = await backend.post("/api/login", JSON.stringify(user), {
         headers: {
           "Content-Type": "application/json",
         },
@@ -60,7 +60,6 @@ const Login = () => {
       }
 
       setToken(res.data.token);
-
       router.push("/");
     } catch (error) {
       console.log(error);
@@ -133,9 +132,6 @@ const Login = () => {
                   color={"white"}
                   _hover={{
                     bg: "blue.500",
-                  }}
-                  onClick={() => {
-                    router.push("/");
                   }}
                 >
                   Sign in
