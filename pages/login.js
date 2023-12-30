@@ -26,9 +26,9 @@ import { AuthContext } from "../utils/AuthContext";
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
-  const [nim, setNim] = useState("");
+  const [email, setEmail] = useState(""); // changed from 'nim' to 'email'
   const [password, setPassword] = useState("");
-  const { setToken } = useContext(AuthContext)
+  const { setToken } = useContext(AuthContext);
 
   const router = useRouter();
 
@@ -37,17 +37,20 @@ const Login = () => {
   const loginHandler = async (e) => {
     e.preventDefault();
     const user = {
-      nim,
+      email, 
       password,
     };
 
     try {
-      const res = await backend.post("auth/login", user, {
+      const res = await backend.post("/login", JSON.stringify(user), {
+        headers: {
+          "Content-Type": "application/json",
+        },
         validateStatus: false,
       });
 
-      if (nim === "" || password === "") {
-        alert("NIM dan Password tidak boleh kosong");
+      if (email === "" || password === "") {
+        alert("Email and Password cannot be empty");
         return;
       }
 
@@ -91,9 +94,9 @@ const Login = () => {
                   />
                   <Input
                     type="text"
-                    placeholder="NIM"
-                    value={nim}
-                    onChange={(e) => setNim(e.target.value)}
+                    placeholder="Email" 
+                    value={email}  
+                    onChange={(e) => setEmail(e.target.value)} // changed from 'setNim' to 'setEmail'
                   />
                 </InputGroup>
               </FormControl>
