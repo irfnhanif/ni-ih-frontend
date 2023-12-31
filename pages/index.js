@@ -1,3 +1,4 @@
+
 import {
   Box,
   Table,
@@ -16,6 +17,12 @@ import {
   ModalCloseButton,
   ModalBody,
   ModalFooter,
+  FormControl,
+  FormLabel,
+  FormHelperText,
+  Input,
+  Flex,
+  Text,
 } from "@chakra-ui/react";
 
 import { useContext, useEffect, useState } from "react";
@@ -23,38 +30,52 @@ import { useContext, useEffect, useState } from "react";
 import backend from "../api/backend";
 import Navbar from "../components/navbar";
 import { AuthContext } from "../utils/AuthContext";
+import { useRouter } from "next/router";
 
 export default function Home() {
   const [books, setBooks] = useState([]);
   const [user, setUser] = useState(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [bookToEdit, setBookToEdit] = useState(null);
+  const [bookObject, setBookObject] = useState(null);
   const { token, setToken } = useContext(AuthContext);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [loading, setLoading] = useState(false);
 
-  async function getAllBooks() {
+  const router = useRouter();
+
+  const getAllBooks = async (page = 1) => {
+    setLoading(true);
+    setCurrentPage(page);
     try {
-      const res = await backend.get(`/books`, {
+      const res = await backend.get(`/api/books?page=${page}`, {
         headers: {
           Accept: "application/json",
-          token,
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
       });
       const data = res.data;
 
       console.log(data);
-      setBooks(data);
+      setBooks(data.books.data);
+      setTotalPages(data.books.last_page);
     } catch (error) {
       console.log(error);
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
   const getBookById = async (book_id) => {
     try {
-      const res = await backend.get(`/books/${book_id}`, {
+      const res = await backend.get(`/api/books/${book_id}`, {
         headers: {
           Accept: "application/json",
-          token,
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
       });
 
@@ -72,10 +93,11 @@ export default function Home() {
 
   const hasUserLoggedIn = async () => {
     try {
-      const res = await backend.get("/user", {
+      const res = await backend.get("/api/user", {
         headers: {
           Accept: "application/json",
-          token,
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
       });
 
@@ -92,10 +114,11 @@ export default function Home() {
 
   const handleLogout = async () => {
     try {
-      const res = await backend.delete("/user/logout", {
+      const res = await backend.delete("/api/user/logout", {
         headers: {
           Accept: "application/json",
-          token,
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
       });
 
@@ -106,6 +129,39 @@ export default function Home() {
 
       setToken(null);
       setUser(null);
+
+      router.push("/login");
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const handleAdd = () => {
+    setIsAddModalOpen(true);
+  };
+
+  const handleCreate = async () => {
+    try {
+      const res = await backend.post(
+        `/api/books/add`,
+        JSON.stringify(bookObject),
+        {
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (res.status !== 200) {
+        alert(res.data.message);
+        return;
+      }
+
+      alert(res.data.message);
+      setIsAddModalOpen(false);
+      getAllBooks();
     } catch (error) {
       console.log(error);
     }
@@ -114,25 +170,30 @@ export default function Home() {
   const handleDetail = async (book_id) => {
     const book = await getBookById(book_id);
 
-    setBookToEdit(book);
-    setIsEditModalOpen(true);
+    setBookObject(book);
+    setIsDetailModalOpen(true);
   };
 
   const handleEdit = async (book_id) => {
     const book = await getBookById(book_id);
 
-    setBookToEdit(book);
+    setBookObject(book);
     setIsEditModalOpen(true);
   };
 
   const handleUpdate = async () => {
     try {
-      const res = await backend.put(`/books/${bookToEdit.id}`, JSON.stringify(bookToEdit), {
-        headers: {
-          Accept: "application/json",
-          token,
-        },
-      });
+      const res = await backend.put(
+        `/api/books/${bookObject.id}/edit`,
+        JSON.stringify(bookObject),
+        {
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       if (res.status !== 200) {
         alert(res.data.message);
@@ -149,10 +210,11 @@ export default function Home() {
 
   const handleDelete = async (book_id) => {
     try {
-      const res = await backend.delete(`/books/${book_id}`, {
+      const res = await backend.delete(`/api/books/${book_id}`, {
         headers: {
           Accept: "application/json",
-          token,
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
       });
 
@@ -166,6 +228,10 @@ export default function Home() {
   };
 
   useEffect(() => {
+    if (!token) {
+      router.push("/login");
+      return;
+    }
     hasUserLoggedIn();
     getAllBooks();
   }, [token]);
@@ -187,6 +253,12 @@ export default function Home() {
         p={8}
         boxShadow="lg"
       >
+        <Flex alignItems="end" justifyContent="end">
+          <Button colorScheme="green" mr={3} onClick={() => handleAdd()}>
+            Add Book
+          </Button>
+        </Flex>
+
         <TableContainer>
           <Table>
             <Thead>
@@ -202,14 +274,31 @@ export default function Home() {
               {books &&
                 books.map((book, index) => (
                   <Tr key={book.id}>
-                    <Td>{index + 1}</Td>
+                    <Td>{(currentPage - 1) * 10 + index + 1}</Td>
                     <Td>{book.isbn}</Td>
                     <Td>{book.title}</Td>
                     <Td>{book.author}</Td>
                     <Td>
-                      <Button onClick={() => handleDetail(book.id)}>Detail</Button>
-                      <Button onClick={() => handleEdit(book.id)}>Edit</Button>
-                      <Button onClick={() => handleDelete(book.id)}>
+                      <Button
+                        colorScheme="blue"
+                        ml={2}
+                        mr={3}
+                        onClick={() => handleDetail(book.id)}
+                      >
+                        Detail
+                      </Button>
+                      <Button
+                        colorScheme="yellow"
+                        mr={3}
+                        onClick={() => handleEdit(book.id)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        colorScheme="red"
+                        mr={2}
+                        onClick={() => handleDelete(book.id)}
+                      >
                         Delete
                       </Button>
                     </Td>
@@ -218,6 +307,122 @@ export default function Home() {
             </Tbody>
           </Table>
         </TableContainer>
+
+        <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)}>
+          <ModalOverlay />
+          <ModalContent>
+            <ModalHeader>Add Book</ModalHeader>
+            <ModalCloseButton />
+            <ModalBody>
+              <FormControl id="isbn">
+                <FormLabel>ISBN</FormLabel>
+                <Input
+                  type="text"
+                  onChange={(e) =>
+                    setBookObject({ ...bookObject, isbn: e.target.value })
+                  }
+                />
+              </FormControl>
+
+              <FormControl id="title">
+                <FormLabel>Title</FormLabel>
+                <Input
+                  type="text"
+                  onChange={(e) =>
+                    setBookObject({ ...bookObject, title: e.target.value })
+                  }
+                />
+              </FormControl>
+
+              <FormControl id="subtitle">
+                <FormLabel>Subtitle</FormLabel>
+                <Input
+                  type="text"
+                  onChange={(e) =>
+                    setBookObject({ ...bookObject, subtitle: e.target.value })
+                  }
+                />
+              </FormControl>
+
+              <FormControl id="author">
+                <FormLabel>Author</FormLabel>
+                <Input
+                  type="text"
+                  onChange={(e) =>
+                    setBookObject({ ...bookObject, author: e.target.value })
+                  }
+                />
+              </FormControl>
+
+              <FormControl id="published">
+                <FormLabel>Published</FormLabel>
+                <Input
+                  type="text"
+                  onChange={(e) =>
+                    setBookObject({ ...bookObject, published: e.target.value })
+                  }
+                />
+                <FormHelperText>
+                  Format: yyyy-MM-dd HH:mm:ss (example: 2024-01-01 00:00:00)
+                </FormHelperText>
+              </FormControl>
+
+              <FormControl id="publisher">
+                <FormLabel>Publisher</FormLabel>
+                <Input
+                  type="text"
+                  onChange={(e) =>
+                    setBookObject({
+                      ...bookObject,
+                      publisher: e.target.value,
+                    })
+                  }
+                />
+              </FormControl>
+
+              <FormControl id="pages">
+                <FormLabel>Pages</FormLabel>
+                <Input
+                  type="text"
+                  onChange={(e) =>
+                    setBookObject({ ...bookObject, pages: e.target.value })
+                  }
+                />
+              </FormControl>
+
+              <FormControl id="description">
+                <FormLabel>Description</FormLabel>
+                <Input
+                  type="text"
+                  onChange={(e) =>
+                    setBookObject({
+                      ...bookObject,
+                      description: e.target.value,
+                    })
+                  }
+                />
+              </FormControl>
+
+              <FormControl id="website">
+                <FormLabel>Website</FormLabel>
+                <Input
+                  type="text"
+                  onChange={(e) =>
+                    setBookObject({ ...bookObject, website: e.target.value })
+                  }
+                />
+              </FormControl>
+            </ModalBody>
+            <ModalFooter>
+              <Button colorScheme="blue" mr={3} onClick={() => handleCreate()}>
+                Create
+              </Button>
+              <Button variant="ghost" onClick={() => setIsAddModalOpen(false)}>
+                Cancel
+              </Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
 
         <Modal
           isOpen={isDetailModalOpen}
@@ -228,20 +433,17 @@ export default function Home() {
             <ModalHeader>Detail Book</ModalHeader>
             <ModalCloseButton />
             <ModalBody>
-                <p>ISBN: {bookToEdit?.isbn}</p>
-                <p>Title: {bookToEdit?.title}</p>
-                <p>Author: {bookToEdit?.author}</p>
-                <p>Published: {bookToEdit?.published}</p>
-                <p>Publisher: {bookToEdit?.publisher}</p>
-                <p>Pages: {bookToEdit?.pages}</p>
-                <p>Description: {bookToEdit?.description}</p>
-                <p>Website: {bookToEdit?.website}</p>
+              <p>ISBN: {bookObject?.isbn}</p>
+              <p>Title: {bookObject?.title}</p>
+              <p>Subtitle: {bookObject?.subtitle}</p>
+              <p>Author: {bookObject?.author}</p>
+              <p>Published: {bookObject?.published}</p>
+              <p>Publisher: {bookObject?.publisher}</p>
+              <p>Pages: {bookObject?.pages}</p>
+              <p>Description: {bookObject?.description}</p>
+              <p>Website: {bookObject?.website}</p>
             </ModalBody>
-            <ModalFooter>
-              <Button variant="ghost" onClick={() => setIsDetailModalOpen(false)}>
-                Cancel
-              </Button>
-            </ModalFooter>
+            <ModalFooter></ModalFooter>
           </ModalContent>
         </Modal>
 
@@ -258,9 +460,9 @@ export default function Home() {
                 <FormLabel>ISBN</FormLabel>
                 <Input
                   type="text"
-                  value={bookToEdit?.isbn || ""}
+                  value={bookObject?.isbn || ""}
                   onChange={(e) =>
-                    setBookToEdit({ ...bookToEdit, isbn: e.target.value })
+                    setBookObject({ ...bookObject, isbn: e.target.value })
                   }
                 />
               </FormControl>
@@ -269,9 +471,20 @@ export default function Home() {
                 <FormLabel>Title</FormLabel>
                 <Input
                   type="text"
-                  value={bookToEdit?.title || ""}
+                  value={bookObject?.title || ""}
                   onChange={(e) =>
-                    setBookToEdit({ ...bookToEdit, title: e.target.value })
+                    setBookObject({ ...bookObject, title: e.target.value })
+                  }
+                />
+              </FormControl>
+
+              <FormControl id="subtitle">
+                <FormLabel>Subtitle</FormLabel>
+                <Input
+                  type="text"
+                  value={bookObject?.subtitle || ""}
+                  onChange={(e) =>
+                    setBookObject({ ...bookObject, subtitle: e.target.value })
                   }
                 />
               </FormControl>
@@ -280,9 +493,9 @@ export default function Home() {
                 <FormLabel>Author</FormLabel>
                 <Input
                   type="text"
-                  value={bookToEdit?.author || ""}
+                  value={bookObject?.author || ""}
                   onChange={(e) =>
-                    setBookToEdit({ ...bookToEdit, author: e.target.value })
+                    setBookObject({ ...bookObject, author: e.target.value })
                   }
                 />
               </FormControl>
@@ -291,9 +504,9 @@ export default function Home() {
                 <FormLabel>Published</FormLabel>
                 <Input
                   type="text"
-                  value={bookToEdit?.published || ""}
+                  value={bookObject?.published || ""}
                   onChange={(e) =>
-                    setBookToEdit({ ...bookToEdit, published: e.target.value })
+                    setBookObject({ ...bookObject, published: e.target.value })
                   }
                 />
               </FormControl>
@@ -302,9 +515,9 @@ export default function Home() {
                 <FormLabel>Publisher</FormLabel>
                 <Input
                   type="text"
-                  value={bookToEdit?.publisher || ""}
+                  value={bookObject?.publisher || ""}
                   onChange={(e) =>
-                    setBookToEdit({ ...bookToEdit, publisher: e.target.value })
+                    setBookObject({ ...bookObject, publisher: e.target.value })
                   }
                 />
               </FormControl>
@@ -313,9 +526,9 @@ export default function Home() {
                 <FormLabel>Pages</FormLabel>
                 <Input
                   type="text"
-                  value={bookToEdit?.pages || ""}
+                  value={bookObject?.pages || ""}
                   onChange={(e) =>
-                    setBookToEdit({ ...bookToEdit, pages: e.target.value })
+                    setBookObject({ ...bookObject, pages: e.target.value })
                   }
                 />
               </FormControl>
@@ -324,10 +537,10 @@ export default function Home() {
                 <FormLabel>Description</FormLabel>
                 <Input
                   type="text"
-                  value={bookToEdit?.description || ""}
+                  value={bookObject?.description || ""}
                   onChange={(e) =>
-                    setBookToEdit({
-                      ...bookToEdit,
+                    setBookObject({
+                      ...bookObject,
                       description: e.target.value,
                     })
                   }
@@ -338,9 +551,9 @@ export default function Home() {
                 <FormLabel>Website</FormLabel>
                 <Input
                   type="text"
-                  value={bookToEdit?.website || ""}
+                  value={bookObject?.website || ""}
                   onChange={(e) =>
-                    setBookToEdit({ ...bookToEdit, website: e.target.value })
+                    setBookObject({ ...bookObject, website: e.target.value })
                   }
                 />
               </FormControl>
@@ -355,6 +568,34 @@ export default function Home() {
             </ModalFooter>
           </ModalContent>
         </Modal>
+
+        <Flex alignItems="center" justifyContent="center" pt={6}>
+          <Button
+            mr={10}
+            isDisabled={loading}
+            onClick={() => {
+              setCurrentPage(currentPage - 1);
+              getAllBooks(currentPage - 1);
+            }}
+            isDisabled={currentPage === 1 || loading}
+          >
+            Previous Page
+          </Button>
+          <Text fontSize="lg" fontWeight="semibold">
+            {currentPage}
+          </Text>
+          <Button
+            ml={10}
+            isDisabled={loading}
+            onClick={() => {
+              setCurrentPage(currentPage + 1);
+              getAllBooks(currentPage + 1);
+            }}
+            isDisabled={currentPage === totalPages || loading}
+          >
+            Next Page
+          </Button>
+        </Flex>
       </Box>
     </Box>
   );
