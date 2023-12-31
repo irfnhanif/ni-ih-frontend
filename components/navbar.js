@@ -18,7 +18,7 @@ const Navbar = ({ user, handleLogout }) => {
     <Box px={10}>
       <Flex my={5} h={16} alignItems="center" justifyContent="space-between">
         <Heading as="h2" size="md">
-          User
+          Front-End - Pre-Screening Test
         </Heading>
 
         <Stack spacing={8} alignItems="center">
@@ -30,13 +30,18 @@ const Navbar = ({ user, handleLogout }) => {
         <Flex alignItems="center" gridColumnGap={4}>
           {user ? (
             <>
-              <Text fontSize="lg">{user.nama}</Text>
+              <Text fontSize="lg">{user.name}</Text>
               <Menu m={0}>
                 <MenuButton minW={0} rounded="full">
                   <Avatar size="sm" />
                 </MenuButton>
                 <MenuList>
-                  <MenuItem onClick={handleLogout}>Logout</MenuItem>
+                  <MenuItem
+                    _hover={{ bg: "red.500", color: "white" }}
+                    onClick={handleLogout}
+                  >
+                    Logout
+                  </MenuItem>
                 </MenuList>
               </Menu>
             </>
